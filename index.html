@@ -2,24 +2,35 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Multi-Size ICO Generator</title>
+<title>Multi-Size ICO Generator with Size Selection</title>
 <style>
   body{font-family:Arial;padding:20px;text-align:center}
   h2{margin-bottom:5px}
   p{color:#555}
-  input{margin-top:15px}
-  button{padding:10px 18px;border:none;border-radius:10px;font-size:16px;margin-top:20px}
+  input, select{margin-top:15px}
+  button{padding:10px 18px;border:none;border-radius:10px;font-size:16px;margin-top:20px; cursor:pointer;}
 </style>
 </head>
 <body>
 
 <h2>PNG ➜ ICO Generator (Multi-size)</h2>
-<p>Generates 16, 32, 48 and 64 pixel ICO</p>
+<p>Select icon sizes to generate ICO file</p>
 
 <input type="file" id="fileInput" accept="image/*"><br>
+
+<label for="sizeSelect">Select sizes (Ctrl+Click to select multiple):</label><br>
+<select id="sizeSelect" multiple size="5" style="margin-top:10px; width: 200px;">
+  <option value="16" selected>16 x 16</option>
+  <option value="32" selected>32 x 32</option>
+  <option value="48" selected>48 x 48</option>
+  <option value="64" selected>64 x 64</option>
+  <option value="128">128 x 128</option>
+  <option value="256">256 x 256</option>
+</select><br>
+
 <button id="generateBtn">Generate ICO</button>
 
-<canvas id="canvas" width="64" height="64" style="display:none"></canvas>
+<canvas id="canvas" width="256" height="256" style="display:none"></canvas>
 
 <script>
 function createBMPFromCanvas(canvas, size){
@@ -39,23 +50,23 @@ function createBMPFromCanvas(canvas, size){
   const buffer = new ArrayBuffer(fileSize);
   const dv = new DataView(buffer);
 
-  dv.setUint16(0, 0x4d42, true);
-  dv.setUint32(2, fileSize, true);
-  dv.setUint32(10, 54, true);
-  dv.setUint32(14, 40, true);
-  dv.setInt32(18, size, true);
-  dv.setInt32(22, -size, true);
-  dv.setUint16(26, 1, true);
-  dv.setUint16(28, 24, true);
-  dv.setUint32(34, imageSize, true);
+  dv.setUint16(0, 0x4d42, true);         // BM
+  dv.setUint32(2, fileSize, true);       // File size
+  dv.setUint32(10, 54, true);             // Pixel data offset
+  dv.setUint32(14, 40, true);             // Info header size
+  dv.setInt32(18, size, true);            // Width
+  dv.setInt32(22, -size, true);           // Negative height for top-down bitmap
+  dv.setUint16(26, 1, true);              // Planes
+  dv.setUint16(28, 24, true);             // Bits per pixel
+  dv.setUint32(34, imageSize, true);      // Image size
 
   let offset = 54;
   let i = 0;
   for(let y = 0; y < size; y++){
     for(let x = 0; x < size; x++){
-      dv.setUint8(offset++, pixels[i+2]);
-      dv.setUint8(offset++, pixels[i+1]);
-      dv.setUint8(offset++, pixels[i]);
+      dv.setUint8(offset++, pixels[i+2]); // Blue
+      dv.setUint8(offset++, pixels[i+1]); // Green
+      dv.setUint8(offset++, pixels[i]);   // Red
       i += 4;
     }
     while((offset - 54) % rowSize) dv.setUint8(offset++, 0);
@@ -70,17 +81,26 @@ document.getElementById("generateBtn").onclick = async () => {
     return;
   }
 
+  const sizeSelect = document.getElementById("sizeSelect");
+  const selectedOptions = Array.from(sizeSelect.selectedOptions);
+  if(selectedOptions.length === 0){
+    alert("Please select at least one size.");
+    return;
+  }
+
+  const sizes = selectedOptions.map(opt => parseInt(opt.value)).sort((a,b)=>a-b);
   const file = fileInput.files[0];
   const img = new Image();
   img.src = URL.createObjectURL(file);
 
   img.onload = () => {
     const baseCanvas = document.getElementById("canvas");
+    baseCanvas.width = 256;  // max size for drawing source image
+    baseCanvas.height = 256;
     const bctx = baseCanvas.getContext("2d");
-    bctx.clearRect(0,0,64,64);
-    bctx.drawImage(img,0,0,64,64);
+    bctx.clearRect(0,0,256,256);
+    bctx.drawImage(img,0,0,256,256);
 
-    const sizes = [16,32,48,64];
     const bmps = sizes.map(s => createBMPFromCanvas(baseCanvas, s));
 
     // ICO header
@@ -92,22 +112,22 @@ document.getElementById("generateBtn").onclick = async () => {
     const buffer = new ArrayBuffer(totalSize);
     const dv = new DataView(buffer);
 
-    dv.setUint16(0, 0, true);
-    dv.setUint16(2, 1, true);
-    dv.setUint16(4, iconCount, true);
+    dv.setUint16(0, 0, true);   // Reserved
+    dv.setUint16(2, 1, true);   // Image type (icon)
+    dv.setUint16(4, iconCount, true);  // Number of images
 
     let offset = 6;
 
     bmps.forEach((bmp, i)=>{
       const size = sizes[i];
-      dv.setUint8(offset++, size === 256 ? 0 : size);
-      dv.setUint8(offset++, size === 256 ? 0 : size);
-      dv.setUint8(offset++, 0);
-      dv.setUint8(offset++, 0);
-      dv.setUint16(offset, 1, true); offset+=2;
-      dv.setUint16(offset, 24, true); offset+=2;
-      dv.setUint32(offset, bmp.length, true); offset+=4;
-      dv.setUint32(offset, imageOffset, true); offset+=4;
+      dv.setUint8(offset++, size === 256 ? 0 : size);  // width
+      dv.setUint8(offset++, size === 256 ? 0 : size);  // height
+      dv.setUint8(offset++, 0);                        // color palette
+      dv.setUint8(offset++, 0);                        // reserved
+      dv.setUint16(offset, 1, true); offset+=2;       // color planes
+      dv.setUint16(offset, 24, true); offset+=2;      // bits per pixel
+      dv.setUint32(offset, bmp.length, true); offset+=4;  // size of bmp data
+      dv.setUint32(offset, imageOffset, true); offset+=4;  // offset of bmp data
       new Uint8Array(buffer, imageOffset, bmp.length).set(bmp);
       imageOffset += bmp.length;
     });
