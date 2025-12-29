@@ -1,114 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Simple PWA Game Demo</title>
-  <style>
-    body {
-      margin: 0; 
-      background: #222;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      user-select: none;
-    }
-    canvas {
-      border: 2px solid #0078d7;
-      background: #111;
-      display: block;
-    }
-    #status {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: #0078d7;
-      padding: 0.5em 1em;
-      border-radius: 5px;
-      font-size: 14px;
-      user-select: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>PNG to ICO Generator</title>
+<style>
+  body{font-family:Arial;padding:20px;text-align:center}
+  input{margin-top:15px}
+  canvas{display:none}
+  button{padding:10px 18px;border:none;border-radius:8px;font-size:16px}
+</style>
 </head>
 <body>
 
-<div id="status">Loading...</div>
-<canvas id="gameCanvas" width="400" height="400"></canvas>
+<h2>PNG ➜ ICO Generator</h2>
+
+<input type="file" id="fileInput" accept="image/*"><br><br>
+<button id="generateBtn">Generate ICO</button>
+
+<canvas id="canvas" width="48" height="48"></canvas>
 
 <script>
-  // Service Worker registration for PWA offline support
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').then(reg => {
-      document.getElementById('status').textContent = 'Service Worker Registered. Offline ready.';
-      console.log('Service Worker registered:', reg);
-    }).catch(err => {
-      document.getElementById('status').textContent = 'Service Worker registration failed.';
-      console.error(err);
-    });
-  } else {
-    document.getElementById('status').textContent = 'Service Worker not supported.';
+document.getElementById("generateBtn").onclick = async () => {
+  const fileInput = document.getElementById("fileInput");
+  if (!fileInput.files.length) {
+    alert("Image file choose please 😄");
+    return;
   }
 
-  // Simple game logic: move blue square with arrow keys inside canvas
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
+  const file = fileInput.files[0];
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
 
-  const player = {
-    x: 180,
-    y: 180,
-    size: 40,
-    speed: 5,
+  img.onload = () => {
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // draw into 48x48 canvas
+    ctx.clearRect(0, 0, 48, 48);
+    ctx.drawImage(img, 0, 0, 48, 48);
+
+    // ICO requires BMP inside .ico container (simple single-size)
+    const bmp = canvas.toDataURL("image/bmp");
+
+    fetch(bmp)
+      .then(res => res.arrayBuffer())
+      .then(buf => {
+        const blob = new Blob([buf], { type: "image/x-icon" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "favicon.ico";
+        a.click();
+      });
   };
-
-  const keys = {
-    ArrowUp: false,
-    ArrowDown: false,
-    ArrowLeft: false,
-    ArrowRight: false,
-  };
-
-  // Key event listeners
-  window.addEventListener('keydown', e => {
-    if (keys.hasOwnProperty(e.key)) {
-      keys[e.key] = true;
-    }
-  });
-
-  window.addEventListener('keyup', e => {
-    if (keys.hasOwnProperty(e.key)) {
-      keys[e.key] = false;
-    }
-  });
-
-  function update() {
-    if (keys.ArrowUp) player.y -= player.speed;
-    if (keys.ArrowDown) player.y += player.speed;
-    if (keys.ArrowLeft) player.x -= player.speed;
-    if (keys.ArrowRight) player.x += player.speed;
-
-    // Boundary checks
-    if (player.x < 0) player.x = 0;
-    if (player.y < 0) player.y = 0;
-    if (player.x + player.size > canvas.width) player.x = canvas.width - player.size;
-    if (player.y + player.size > canvas.height) player.y = canvas.height - player.size;
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#0078d7';
-    ctx.fillRect(player.x, player.y, player.size, player.size);
-  }
-
-  function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-  }
-
-  loop();
+};
 </script>
 
 </body>
