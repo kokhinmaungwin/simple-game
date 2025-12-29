@@ -1,42 +1,39 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Multi-Size ICO Generator with Size Selection</title>
-<style>
-  body{font-family:Arial;padding:20px;text-align:center}
-  h2{margin-bottom:5px}
-  p{color:#555}
-  input, select{margin-top:15px}
-  button{padding:10px 18px;border:none;border-radius:10px;font-size:16px;margin-top:20px; cursor:pointer;}
-</style>
+  <meta charset="UTF-8" />
+  <title>Multi-Size ICO Generator (White BG & Aspect Ratio Fix)</title>
+  <style>
+    body { font-family: Arial; padding: 20px; text-align: center; }
+    h2 { margin-bottom: 5px; }
+    p { color: #555; }
+    input, select, button { margin-top: 15px; font-size: 16px; }
+    button { padding: 10px 18px; border: none; border-radius: 10px; cursor: pointer; }
+    #output { margin-top: 20px; font-family: monospace; font-size: 16px; color: #333; }
+    #canvas { display: none; }
+  </style>
 </head>
 <body>
 
 <h2>PNG ➜ ICO Generator (Multi-size)</h2>
-<p>Select icon sizes to generate ICO file</p>
+<p>Generates 16, 32, 48, 64 pixel ICO with white background</p>
 
-<input type="file" id="fileInput" accept="image/*"><br>
+<input type="file" id="fileInput" accept="image/*" /><br/>
 
-<label for="sizeSelect">Select sizes (Ctrl+Click to select multiple):</label><br>
-<select id="sizeSelect" multiple size="5" style="margin-top:10px; width: 200px;">
-  <option value="16" selected>16 x 16</option>
-  <option value="32" selected>32 x 32</option>
-  <option value="48" selected>48 x 48</option>
+<select id="sizeSelect" multiple size="4" style="width: 150px;">
+  <option value="16">16 x 16</option>
+  <option value="32">32 x 32</option>
+  <option value="48">48 x 48</option>
   <option value="64" selected>64 x 64</option>
-  <option value="128">128 x 128</option>
-  <option value="256">256 x 256</option>
-</select><br>
+</select><br/>
 
-<!-- HTML -->
 <button id="generateBtn">Generate ICO</button>
 
-<div id="output" style="margin-top:20px; font-family: monospace; font-size: 16px; color: #333;"></div>
-
-<canvas id="canvas" width="256" height="256" style="display:none"></canvas>
+<div id="output"></div>
+<canvas id="canvas" width="256" height="256"></canvas>
 
 <script>
-function createBMPFromCanvas(canvas, size){
+function createBMPFromCanvas(canvas, size) {
   const ctx = canvas.getContext("2d");
   const tmp = document.createElement("canvas");
   tmp.width = size;
@@ -65,44 +62,63 @@ function createBMPFromCanvas(canvas, size){
 
   let offset = 54;
   let i = 0;
-  for(let y = 0; y < size; y++){
-    for(let x = 0; x < size; x++){
-      dv.setUint8(offset++, pixels[i+2]); // Blue
-      dv.setUint8(offset++, pixels[i+1]); // Green
-      dv.setUint8(offset++, pixels[i]);   // Red
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      dv.setUint8(offset++, pixels[i + 2]); // Blue
+      dv.setUint8(offset++, pixels[i + 1]); // Green
+      dv.setUint8(offset++, pixels[i]);     // Red
       i += 4;
     }
-    while((offset - 54) % rowSize) dv.setUint8(offset++, 0);
+    while ((offset - 54) % rowSize) dv.setUint8(offset++, 0);
   }
   return new Uint8Array(buffer);
 }
 
 document.getElementById("generateBtn").onclick = async () => {
   const fileInput = document.getElementById("fileInput");
-  if(!fileInput.files.length){
+  if (!fileInput.files.length) {
     alert("Choose an image first 😄");
     return;
   }
 
   const sizeSelect = document.getElementById("sizeSelect");
   const selectedOptions = Array.from(sizeSelect.selectedOptions);
-  if(selectedOptions.length === 0){
+  if (selectedOptions.length === 0) {
     alert("Please select at least one size.");
     return;
   }
 
-  const sizes = selectedOptions.map(opt => parseInt(opt.value)).sort((a,b)=>a-b);
+  const sizes = selectedOptions.map(opt => parseInt(opt.value)).sort((a, b) => a - b);
   const file = fileInput.files[0];
   const img = new Image();
   img.src = URL.createObjectURL(file);
 
   img.onload = () => {
     const baseCanvas = document.getElementById("canvas");
-    baseCanvas.width = 256;  // max size for drawing source image
-    baseCanvas.height = 256;
     const bctx = baseCanvas.getContext("2d");
-    bctx.clearRect(0,0,256,256);
-    bctx.drawImage(img,0,0,256,256);
+
+    // Setup canvas size max 256x256
+    baseCanvas.width = 256;
+    baseCanvas.height = 256;
+
+    // Fill white background (no transparency)
+    bctx.fillStyle = "#ffffff";
+    bctx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
+
+    // Calculate aspect ratio resized dimensions
+    let w = img.width;
+    let h = img.height;
+    const maxSize = 256;
+    if (w > h) {
+      h = (h / w) * maxSize;
+      w = maxSize;
+    } else {
+      w = (w / h) * maxSize;
+      h = maxSize;
+    }
+
+    // Draw image with preserved aspect ratio on white bg
+    bctx.drawImage(img, 0, 0, w, h);
 
     const bmps = sizes.map(s => createBMPFromCanvas(baseCanvas, s));
 
@@ -111,7 +127,7 @@ document.getElementById("generateBtn").onclick = async () => {
     const headerSize = 6 + 16 * iconCount;
     let imageOffset = headerSize;
 
-    const totalSize = headerSize + bmps.reduce((a,b)=>a+b.length,0);
+    const totalSize = headerSize + bmps.reduce((a, b) => a + b.length, 0);
     const buffer = new ArrayBuffer(totalSize);
     const dv = new DataView(buffer);
 
@@ -121,21 +137,21 @@ document.getElementById("generateBtn").onclick = async () => {
 
     let offset = 6;
 
-    bmps.forEach((bmp, i)=>{
+    bmps.forEach((bmp, i) => {
       const size = sizes[i];
       dv.setUint8(offset++, size === 256 ? 0 : size);  // width
       dv.setUint8(offset++, size === 256 ? 0 : size);  // height
       dv.setUint8(offset++, 0);                        // color palette
       dv.setUint8(offset++, 0);                        // reserved
-      dv.setUint16(offset, 1, true); offset+=2;       // color planes
-      dv.setUint16(offset, 24, true); offset+=2;      // bits per pixel
-      dv.setUint32(offset, bmp.length, true); offset+=4;  // size of bmp data
-      dv.setUint32(offset, imageOffset, true); offset+=4;  // offset of bmp data
+      dv.setUint16(offset, 1, true); offset += 2;       // color planes
+      dv.setUint16(offset, 24, true); offset += 2;      // bits per pixel
+      dv.setUint32(offset, bmp.length, true); offset += 4;  // size of bmp data
+      dv.setUint32(offset, imageOffset, true); offset += 4;  // offset of bmp data
       new Uint8Array(buffer, imageOffset, bmp.length).set(bmp);
       imageOffset += bmp.length;
     });
 
-    const blob = new Blob([buffer], {type:"image/x-icon"});
+    const blob = new Blob([buffer], { type: "image/x-icon" });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
@@ -143,17 +159,16 @@ document.getElementById("generateBtn").onclick = async () => {
     a.download = "favicon.ico";
     a.click();
 
+    const outputDiv = document.getElementById("output");
 
-const outputDiv = document.getElementById("output");
+    const fileSizeKB = (buffer.byteLength / 1024).toFixed(2);
+    const sizeList = sizes.join(", ");
 
-const fileSizeKB = (buffer.byteLength / 1024).toFixed(2);
-const sizeList = sizes.join(", ");
-
-outputDiv.innerHTML = `
-  <strong>Generated ICO file:</strong><br>
-  Sizes included: ${sizeList} px<br>
-  File size: ${fileSizeKB} KB
-`;
+    outputDiv.innerHTML = `
+      <strong>Generated ICO file:</strong><br>
+      Sizes included: ${sizeList} px<br>
+      File size: ${fileSizeKB} KB
+    `;
   };
 };
 </script>
