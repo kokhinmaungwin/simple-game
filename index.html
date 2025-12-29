@@ -28,7 +28,10 @@
   <option value="256">256 x 256</option>
 </select><br>
 
+<!-- HTML -->
 <button id="generateBtn">Generate ICO</button>
+
+<div id="output" style="margin-top:20px; font-family: monospace; font-size: 16px; color: #333;"></div>
 
 <canvas id="canvas" width="256" height="256" style="display:none"></canvas>
 
@@ -139,6 +142,18 @@ document.getElementById("generateBtn").onclick = async () => {
     a.href = url;
     a.download = "favicon.ico";
     a.click();
+
+
+const outputDiv = document.getElementById("output");
+
+const fileSizeKB = (buffer.byteLength / 1024).toFixed(2);
+const sizeList = sizes.join(", ");
+
+outputDiv.innerHTML = `
+  <strong>Generated ICO file:</strong><br>
+  Sizes included: ${sizeList} px<br>
+  File size: ${fileSizeKB} KB
+`;
   };
 };
 </script>
