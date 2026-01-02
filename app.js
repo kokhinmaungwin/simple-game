@@ -43,33 +43,24 @@ btn.onclick = async () => {
 
       ctx.drawImage(img, x, y, w, h);
 
-      // preview images
+      // show preview
       const url = canvas.toDataURL("image/png");
-      const previewImg = document.createElement("img");
-      previewImg.src = url;
-      previewImg.width = size;
-      previewImg.height = size;
-      preview.appendChild(previewImg);
+      preview.innerHTML = `<img src="${url}">`;
 
-      // convert PNG → buffer for ICO
-      const bin = await (await fetch(url)).arrayBuffer();
-      pngBuffers.push(new Uint8Array(bin));
-    }
+      sizeText.textContent = "Generated Size: " + size + " x " + size;
 
-    // encode ICO (icojs library)
-    const icoBuffer = await ICO.encode(pngBuffers);
+      imgBlobURL = url;
 
-    const blob = new Blob([icoBuffer], { type: "image/x-icon" });
-    const icoURL = URL.createObjectURL(blob);
-
-    // show button after success
-    downloadICO.style.display = "inline-block";
-
-    downloadICO.onclick = () => {
-      const a = document.createElement("a");
-      a.href = icoURL;
-      a.download = "favicon.ico";
-      a.click();
+      downloadBtn.style.display = "inline-block";
     };
+    img.src = e.target.result;
   };
+  reader.readAsDataURL(file);
+};
+
+downloadBtn.onclick = () => {
+  const a = document.createElement("a");
+  a.href = imgBlobURL;
+  a.download = "favicon.png"; // safe
+  a.click();
 };
