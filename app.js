@@ -1,7 +1,7 @@
 const input = document.getElementById("fileInput");
 const btn = document.getElementById("generateBtn");
 const preview = document.getElementById("preview");
-
+const downloadICO = document.getElementById("downloadICO");
 
 btn.onclick = async () => {
 
@@ -63,7 +63,7 @@ btn.onclick = async () => {
     const icoURL = URL.createObjectURL(blob);
 
     // show button after success
-    const downloadICO = document.getElementById("downloadICO");
+    
 ‎    downloadICO.style.display = "inline-block";
 ‎
 ‎    downloadICO.onclick = () => {
