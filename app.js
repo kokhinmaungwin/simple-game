@@ -1,43 +1,58 @@
-function createBMPFromCanvas(canvas, size){
-  const ctx = canvas.getContext("2d");
+function createBMPFromCanvas(canvas, size) {
   const tmp = document.createElement("canvas");
   tmp.width = size;
   tmp.height = size;
   const tctx = tmp.getContext("2d");
+
+  // ပုံကို resize ဆွဲ
   tctx.clearRect(0, 0, size, size);
   tctx.drawImage(canvas, 0, 0, size, size);
 
   const imgData = tctx.getImageData(0, 0, size, size);
   const pixels = imgData.data;
 
-  const rowSize = Math.ceil((24 * size + 31) / 32) * 4;
+  // BMP row size = each row aligned to 4 bytes boundary
+  const rowSize = Math.floor((24 * size + 31) / 32) * 4;
   const imageSize = rowSize * size;
   const fileSize = 54 + imageSize;
 
   const buffer = new ArrayBuffer(fileSize);
   const dv = new DataView(buffer);
 
-  dv.setUint16(0, 0x4d42, true);         // BM
-  dv.setUint32(2, fileSize, true);       // File size
-  dv.setUint32(10, 54, true);             // Pixel data offset
-  dv.setUint32(14, 40, true);             // Info header size
-  dv.setInt32(18, size, true);            // Width
-  dv.setInt32(22, -size, true);           // Negative height for top-down bitmap
-  dv.setUint16(26, 1, true);              // Planes
-  dv.setUint16(28, 24, true);             // Bits per pixel
-  dv.setUint32(34, imageSize, true);      // Image size
+  // BMP Header
+  dv.setUint16(0, 0x4d42, true);           // BM
+  dv.setUint32(2, fileSize, true);         // File size
+  dv.setUint32(6, 0, true);                 // Reserved
+  dv.setUint32(10, 54, true);               // Pixel data offset
+  // DIB header
+  dv.setUint32(14, 40, true);               // DIB header size
+  dv.setInt32(18, size, true);              // Width
+  dv.setInt32(22, -size, true);             // Height (negative for top-down bitmap)
+  dv.setUint16(26, 1, true);                // Planes
+  dv.setUint16(28, 24, true);               // Bits per pixel
+  dv.setUint32(30, 0, true);                // Compression (0 = none)
+  dv.setUint32(34, imageSize, true);        // Image size
+  dv.setInt32(38, 0, true);                 // X pixels per meter
+  dv.setInt32(42, 0, true);                 // Y pixels per meter
+  dv.setUint32(46, 0, true);                // Colors used
+  dv.setUint32(50, 0, true);                // Important colors
 
   let offset = 54;
-  let i = 0;
-  for(let y = 0; y < size; y++){
-    for(let x = 0; x < size; x++){
-      dv.setUint8(offset++, pixels[i+2]); // Blue
-      dv.setUint8(offset++, pixels[i+1]); // Green
-      dv.setUint8(offset++, pixels[i]);   // Red
-      i += 4;
+  for (let y = 0; y < size; y++) {
+    let rowOffset = offset + y * rowSize;
+    for (let x = 0; x < size; x++) {
+      const pxIndex = (y * size + x) * 4;
+      // BMP format stores pixels in BGR order, ignoring alpha
+      dv.setUint8(rowOffset++, pixels[pxIndex + 2]); // Blue
+      dv.setUint8(rowOffset++, pixels[pxIndex + 1]); // Green
+      dv.setUint8(rowOffset++, pixels[pxIndex]);     // Red
     }
-    while((offset - 54) % rowSize) dv.setUint8(offset++, 0);
+    // Padding zeros for row alignment
+    while ((rowOffset - offset) % rowSize !== 0) {
+      dv.setUint8(rowOffset++, 0);
+    }
   }
+
   return new Uint8Array(buffer);
 }
 
