@@ -1,41 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Multi-Size ICO Generator (Offline PWA)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Multi-Size ICO Generator (PWA with Install Button)</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0a84ff" />
 
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0a84ff">
-
-<style>
-body{font-family:Arial;padding:15px}
-#preview{display:flex;gap:10px;flex-wrap:wrap}
-#preview img{border:1px solid #ddd;padding:6px;border-radius:10px}
-button{padding:8px 14px;border-radius:8px}
-</style>
+  <link real="stylesheet" href="style.css" />
 </head>
-
 <body>
-<h2>Multi-Size ICO Generator</h2>
 
-<input type="file" id="fileInput" accept="image/*">
+  <h2>Multi-Size ICO Generator</h2>
 
-<br><br>
-<button id="generateBtn">Generate Icons</button>
+  <input type="file" id="fileInput" accept="image/*" /><br />
 
-<h3>Preview (multi-size)</h3>
-<div id="preview"></div>
+  <button id="generateBtn">Generate Icons</button>
+  <button id="downloadICO">Download ICO</button>
+  <button id="installBtn">Install App</button>
 
-<button id="downloadICO" style="display:none;">Download .ICO</button>
+  <h3>Preview (multi-size)</h3>
+  <div id="preview"></div>
 
+  <div id="output"></div>
+
+  <canvas id="canvas" width="256" height="256" style="display:none"></canvas>
 <script src="app.js"></script>
 
 <script>
-// PWA register
-if ("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js");
-}
-</script>
+  // PWA install button handling
+  let deferredPrompt;
+  const installBtn = document.getElementById('installBtn');
 
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = 'inline-block';
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choiceResult = await deferredPrompt.userChoice;
+    if (choiceResult.outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+    } else {
+      console.log('User dismissed the install prompt');
+    }
+    deferredPrompt = null;
+    installBtn.style.display = 'none';
+  });
+
+  </script>
+
+<script>
+// Register service worker for PWA
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").then(() => {
+      console.log("Service Worker registered");
+    });
+  }
+</script>
 </body>
 </html>
