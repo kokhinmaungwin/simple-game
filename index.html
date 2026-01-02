@@ -12,7 +12,6 @@ body{font-family:Arial;padding:15px}
 #preview{display:flex;gap:10px;flex-wrap:wrap}
 #preview img{border:1px solid #ddd;padding:6px;border-radius:10px}
 button{padding:8px 14px;border-radius:8px}
-#downloadICO{color:#0f0;}
 </style>
 </head>
 
@@ -27,9 +26,9 @@ button{padding:8px 14px;border-radius:8px}
 <h3>Preview (multi-size)</h3>
 <div id="preview"></div>
 
-<button id="downloadICO">Download .ICO</button>
+<button id="downloadICO" style="display:none">Download .ICO</button>
 
-<script src="https://unpkg.com/icojs/dist/ico.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/icojs/dist/ico.min.js"></script>
 <script src="app.js"></script>
 
 <script>
